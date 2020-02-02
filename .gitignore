@@ -1,0 +1,4 @@
+.ipy*
+*__pycache__*
+coco
+pytorch-AdaIN/depth_data
