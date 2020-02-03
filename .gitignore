@@ -2,3 +2,5 @@
 *__pycache__*
 coco
 pytorch-AdaIN/depth_data
+pytorch-AdaIN/rgbd-scenes-v2
+pytorch-AdaIN/input/content
