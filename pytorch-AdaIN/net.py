@@ -2,6 +2,9 @@ import torch.nn as nn
 
 from function import adaptive_instance_normalization as adain
 from function import calc_mean_std
+from lib.loss_depth import L2Loss, GradientLoss, NormalLoss, BerHu
+from lib.depth_net import DepthV3
+import torch
 
 decoder = nn.Sequential(
     nn.ReflectionPad2d((1, 1, 1, 1)),
@@ -93,7 +96,7 @@ vgg = nn.Sequential(
 
 
 class Net(nn.Module):
-    def __init__(self, encoder, decoder):
+    def __init__(self, encoder, decoder, depth_estimator):
         super(Net, self).__init__()
         enc_layers = list(encoder.children())
         self.enc_1 = nn.Sequential(*enc_layers[:4])  # input -> relu1_1
@@ -102,7 +105,9 @@ class Net(nn.Module):
         self.enc_4 = nn.Sequential(*enc_layers[18:31])  # relu3_1 -> relu4_1
         self.decoder = decoder
         self.mse_loss = nn.MSELoss()
+        self.depth_estimator = depth_estimator
 
+    
         # fix the encoder
         for name in ['enc_1', 'enc_2', 'enc_3', 'enc_4']:
             for param in getattr(self, name).parameters():
@@ -134,6 +139,19 @@ class Net(nn.Module):
         target_mean, target_std = calc_mean_std(target)
         return self.mse_loss(input_mean, target_mean) + \
                self.mse_loss(input_std, target_std)
+    
+    def calc_depth_loss(self, input, target):
+        assert (input.size() == target.size())
+        assert (target.requires_grad is False)
+        lossGrad = GradientLoss()
+        lossNormal = NormalLoss()
+        berhu = BerHu()
+        loss_Berhu = berhu(input, target) 
+        loss_grad = lossGrad(input, target) 
+        loss_normal = lossNormal(input, target) 
+        total_loss = loss_Berhu + loss_normal + loss_grad
+        return total_loss
+        
 
     def forward(self, content, style, alpha=1.0):
         assert 0 <= alpha <= 1
@@ -144,9 +162,13 @@ class Net(nn.Module):
 
         g_t = self.decoder(t)
         g_t_feats = self.encode_with_intermediate(g_t)
+        
+        
 
         loss_c = self.calc_content_loss(g_t_feats[-1], t)
         loss_s = self.calc_style_loss(g_t_feats[0], style_feats[0])
+#         loss_d = calc_depth_loss(self, input, target)
+            
         for i in range(1, 4):
             loss_s += self.calc_style_loss(g_t_feats[i], style_feats[i])
         return loss_c, loss_s

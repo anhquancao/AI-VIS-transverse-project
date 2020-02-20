@@ -4,4 +4,8 @@ coco
 pytorch-AdaIN/depth_data
 pytorch-AdaIN/rgbd-scenes-v2
 pytorch-AdaIN/input/content
+pytorch-AdaIN/input/faces
+pytorch-AdaIN/input/arts
+pytorch-AdaIN/input/art_test
+pytorch-AdaIN/input/face_test
 DIW
